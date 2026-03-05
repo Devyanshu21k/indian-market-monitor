@@ -1,0 +1,257 @@
+import feedparser
+import requests
+import os
+import hashlib
+
+# =============================
+# TELEGRAM CONFIG
+# =============================
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
+
+
+def send_telegram(message):
+
+    if not BOT_TOKEN or not CHAT_ID:
+        print("Telegram credentials missing")
+        return
+
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
+    try:
+        requests.post(url, data={
+            "chat_id": CHAT_ID,
+            "text": message
+        })
+    except Exception as e:
+        print("Telegram error:", e)
+
+
+# =============================
+# NEWS SOURCES
+# =============================
+
+news_sources = [
+
+# Global geopolitics
+"https://news.google.com/rss/search?q=war+OR+sanctions+OR+military+conflict",
+"https://www.reuters.com/world/rss",
+"https://feeds.bbci.co.uk/news/world/rss.xml",
+
+# Global economy
+"https://www.reuters.com/markets/rss",
+"https://feeds.bbci.co.uk/news/business/rss.xml",
+
+# India markets
+"https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
+
+# Macro policy
+"https://news.google.com/rss/search?q=federal+reserve+OR+rbi+policy+OR+interest+rates",
+
+# Commodities
+"https://news.google.com/rss/search?q=oil+prices+OR+crude+oil+OPEC"
+
+]
+
+
+# =============================
+# KEYWORDS
+# =============================
+
+keywords = [
+"war",
+"oil",
+"inflation",
+"rate",
+"sanction",
+"military",
+"crude",
+"federal",
+"rbi"
+]
+
+
+# =============================
+# FETCH NEWS
+# =============================
+
+def fetch_news():
+
+    articles = []
+    seen_hashes = set()
+
+    for source in news_sources:
+
+        try:
+            feed = feedparser.parse(source)
+        except:
+            continue
+
+        for entry in feed.entries:
+
+            title = entry.title.strip()
+
+            # Ignore very short titles
+            if len(title) < 25:
+                continue
+
+            # Keyword filter
+            if not any(word in title.lower() for word in keywords):
+                continue
+
+            # Create unique hash
+            article_hash = hashlib.md5(title.encode()).hexdigest()
+
+            if article_hash in seen_hashes:
+                continue
+
+            seen_hashes.add(article_hash)
+
+            articles.append({
+                "title": title,
+                "link": entry.link
+            })
+
+    return articles
+
+
+# =============================
+# CLASSIFY EVENT
+# =============================
+
+def classify_event(title):
+
+    t = title.lower()
+
+    if "war" in t or "missile" in t or "military" in t:
+        return "Geopolitical Conflict"
+
+    if "oil" in t or "crude" in t or "opec" in t:
+        return "Oil Market Shock"
+
+    if "inflation" in t or "cpi" in t:
+        return "Inflation News"
+
+    if "rate" in t or "federal reserve" in t or "rbi" in t:
+        return "Interest Rate Policy"
+
+    if "sanction" in t:
+        return "Trade Sanctions"
+
+    return None
+
+
+# =============================
+# MARKET DATA (NSE API)
+# =============================
+
+def get_market_data():
+
+    url = "https://www.nseindia.com/api/allIndices"
+
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
+    market = {
+        "nifty": 0,
+        "bank": 0,
+        "it": 0
+    }
+
+    try:
+
+        response = requests.get(url, headers=headers)
+        data = response.json()
+
+        for index in data["data"]:
+
+            if index["index"] == "NIFTY 50":
+                market["nifty"] = float(index["percentChange"])
+
+            if index["index"] == "NIFTY BANK":
+                market["bank"] = float(index["percentChange"])
+
+            if index["index"] == "NIFTY IT":
+                market["it"] = float(index["percentChange"])
+
+    except Exception as e:
+        print("Market data error:", e)
+
+    return market
+
+
+# =============================
+# CONFIRM EVENT
+# =============================
+
+def confirm_event(event, market):
+
+    if event == "Geopolitical Conflict" and market["nifty"] < -0.5:
+        return True
+
+    if event == "Oil Market Shock" and market["nifty"] < -0.5:
+        return True
+
+    if event == "Inflation News" and market["bank"] < -0.5:
+        return True
+
+    if event == "Interest Rate Policy" and market["bank"] < -0.5:
+        return True
+
+    if event == "Trade Sanctions" and market["it"] < -0.5:
+        return True
+
+    return False
+
+
+# =============================
+# MAIN MONITOR FUNCTION
+# =============================
+
+def run_monitor():
+
+    print("Running market monitor...")
+
+    news = fetch_news()
+    market = get_market_data()
+
+    for article in news:
+
+        event = classify_event(article["title"])
+
+        if not event:
+            continue
+
+        confirmed = confirm_event(event, market)
+
+        if confirmed:
+
+            message = f"""
+🚨 MARKET ALERT
+
+Event: {event}
+
+Headline:
+{article['title']}
+
+Market Data
+NIFTY 50: {market['nifty']} %
+NIFTY BANK: {market['bank']} %
+NIFTY IT: {market['it']} %
+
+Source:
+{article['link']}
+"""
+
+            print(message)
+            send_telegram(message)
+
+
+# =============================
+# ENTRY POINT
+# =============================
+
+if __name__ == "__main__":
+    run_monitor()
