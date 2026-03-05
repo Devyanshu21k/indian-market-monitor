@@ -3,23 +3,6 @@ import requests
 import os
 import hashlib
 
-PROCESSED_FILE = "processed_news.txt"
-
-
-def load_processed():
-
-    try:
-        with open(PROCESSED_FILE, "r") as f:
-            return set(line.strip() for line in f)
-    except:
-        return set()
-
-
-def save_processed(article_hash):
-
-    with open(PROCESSED_FILE, "a") as f:
-        f.write(article_hash + "\n")
-        
 # =============================
 # TELEGRAM CONFIG
 # =============================
@@ -46,27 +29,49 @@ def send_telegram(message):
 
 
 # =============================
+# STORAGE FOR PROCESSED NEWS
+# =============================
+
+PROCESSED_FILE = "processed_news.txt"
+
+
+def load_processed():
+
+    try:
+        with open(PROCESSED_FILE, "r") as f:
+            return set(line.strip() for line in f)
+    except:
+        return set()
+
+
+def save_processed(article_hash):
+
+    with open(PROCESSED_FILE, "a") as f:
+        f.write(article_hash + "\n")
+
+
+# =============================
 # NEWS SOURCES
 # =============================
 
 news_sources = [
 
-# Global geopolitics
+# global geopolitics
 "https://news.google.com/rss/search?q=war+OR+sanctions+OR+military+conflict",
 "https://www.reuters.com/world/rss",
 "https://feeds.bbci.co.uk/news/world/rss.xml",
 
-# Global economy
+# global economics
 "https://www.reuters.com/markets/rss",
 "https://feeds.bbci.co.uk/news/business/rss.xml",
 
-# India markets
+# india markets
 "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
 
-# Macro policy
+# macro policy
 "https://news.google.com/rss/search?q=federal+reserve+OR+rbi+policy+OR+interest+rates",
 
-# Commodities
+# commodities
 "https://news.google.com/rss/search?q=oil+prices+OR+crude+oil+OPEC"
 
 ]
@@ -101,20 +106,27 @@ def fetch_news():
     for source in news_sources:
 
         try:
-            feed = feedparser.parse(source)
-        except:
+            feed = feedparser.parse(
+                source,
+                request_headers={"User-Agent": "Mozilla/5.0"}
+            )
+        except Exception as e:
+            print(f"RSS error for {source}: {e}")
             continue
 
         for entry in feed.entries:
 
             title = entry.title.strip()
 
+            # short headline filter
             if len(title) < 25:
                 continue
 
+            # keyword filter
             if not any(word in title.lower() for word in keywords):
                 continue
 
+            # create hash
             article_hash = hashlib.md5(title.encode()).hexdigest()
 
             if article_hash in seen_hashes:
@@ -127,7 +139,10 @@ def fetch_news():
                 "link": entry.link
             })
 
+    print(f"Articles fetched: {len(articles)}")
+
     return articles
+
 
 # =============================
 # CLASSIFY EVENT
@@ -156,7 +171,7 @@ def classify_event(title):
 
 
 # =============================
-# MARKET DATA (NSE API)
+# NSE MARKET DATA
 # =============================
 
 def get_market_data():
@@ -226,7 +241,7 @@ def confirm_event(event, market):
 def run_monitor():
 
     print("Running market monitor...")
-    
+
     news = fetch_news()
     market = get_market_data()
 
@@ -267,8 +282,4 @@ Source:
 # =============================
 
 if __name__ == "__main__":
-
     run_monitor()
-
-
-
