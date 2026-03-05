@@ -3,6 +3,23 @@ import requests
 import os
 import hashlib
 
+PROCESSED_FILE = "processed_news.txt"
+
+
+def load_processed():
+
+    try:
+        with open(PROCESSED_FILE, "r") as f:
+            return set(line.strip() for line in f)
+    except:
+        return set()
+
+
+def save_processed(article_hash):
+
+    with open(PROCESSED_FILE, "a") as f:
+        f.write(article_hash + "\n")
+        
 # =============================
 # TELEGRAM CONFIG
 # =============================
@@ -79,7 +96,7 @@ keywords = [
 def fetch_news():
 
     articles = []
-    seen_hashes = set()
+    seen_hashes = load_processed()
 
     for source in news_sources:
 
@@ -92,21 +109,18 @@ def fetch_news():
 
             title = entry.title.strip()
 
-            # Ignore very short titles
             if len(title) < 25:
                 continue
 
-            # Keyword filter
             if not any(word in title.lower() for word in keywords):
                 continue
 
-            # Create unique hash
             article_hash = hashlib.md5(title.encode()).hexdigest()
 
             if article_hash in seen_hashes:
                 continue
 
-            seen_hashes.add(article_hash)
+            save_processed(article_hash)
 
             articles.append({
                 "title": title,
@@ -114,7 +128,6 @@ def fetch_news():
             })
 
     return articles
-
 
 # =============================
 # CLASSIFY EVENT
@@ -254,4 +267,5 @@ Source:
 # =============================
 
 if __name__ == "__main__":
+
     run_monitor()
