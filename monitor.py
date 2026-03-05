@@ -227,8 +227,6 @@ def run_monitor():
 
     print("Running market monitor...")
     
-    send_telegram("Market monitor test run successful")
-
     news = fetch_news()
     market = get_market_data()
 
@@ -271,5 +269,6 @@ Source:
 if __name__ == "__main__":
 
     run_monitor()
+
 
 
