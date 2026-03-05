@@ -226,6 +226,7 @@ def confirm_event(event, market):
 def run_monitor():
 
     print("Running market monitor...")
+    
     send_telegram("Market monitor test run successful")
 
     news = fetch_news()
@@ -270,4 +271,5 @@ Source:
 if __name__ == "__main__":
 
     run_monitor()
+
 
