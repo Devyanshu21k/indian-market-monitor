@@ -57,7 +57,7 @@ def save_processed(article_hash):
 news_sources = [
 
 # global geopolitics
-"https://news.google.com/rss/search?q=war+OR+sanctions+OR+military+conflict",
+"https://news.google.com/rss/search?q=war+oil+inflation+interest+rate+india+markets&hl=en-IN&gl=IN&ceid=IN:en",
 "https://www.reuters.com/world/rss",
 "https://feeds.bbci.co.uk/news/world/rss.xml",
 
@@ -283,3 +283,4 @@ Source:
 
 if __name__ == "__main__":
     run_monitor()
+
