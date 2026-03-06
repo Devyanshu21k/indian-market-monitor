@@ -119,7 +119,7 @@ def fetch_news():
             title = entry.title.strip()
 
             # short headline filter
-            if len(title) < 25:
+            if len(title) < 35:
                 continue
 
             # keyword filter
@@ -283,4 +283,5 @@ Source:
 
 if __name__ == "__main__":
     run_monitor()
+
 
