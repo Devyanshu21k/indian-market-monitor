@@ -83,14 +83,35 @@ news_sources = [
 
 keywords = [
 "war",
-"oil",
+"missile",
+"military strike",
+"oil price",
+"crude oil",
+"opec",
 "inflation",
-"rate",
-"sanction",
-"military",
-"crude",
-"federal",
-"rbi"
+"interest rate",
+"rate hike",
+"rate cut",
+"central bank",
+"federal reserve",
+"rbi policy",
+"sanctions",
+"export ban",
+"trade restriction",
+"bank crisis",
+"market crash"
+]
+
+noise_words = [
+"opinion",
+"analysis",
+"newsletter",
+"podcast",
+"live updates",
+"morning briefing",
+"what to watch",
+"stocks to watch",
+"market wrap"
 ]
 
 
@@ -118,12 +139,19 @@ def fetch_news():
 
             title = entry.title.strip()
 
+            title_lower = title.lower()
             # short headline filter
             if len(title) < 45:
                 continue
 
             # keyword filter
-            if not any(word in title.lower() for word in keywords):
+            if any(word in title_lower for word in noise_words):
+                continue
+            # stricter keuword filter
+            if not any(word in title_lower for word in noise_words):
+                continue
+            # prevent very similar headline
+            if any(title_lower[:40] in a["title"].lower() for a in articles):
                 continue
 
             # create hash
@@ -283,6 +311,7 @@ Source:
 
 if __name__ == "__main__":
     run_monitor()
+
 
 
 
